@@ -18,6 +18,8 @@ class SatelliteGroundTrack(SQLModel, table=True):
         once PostGIS extension is guaranteed in all environments.
     """
 
+    __tablename__ = "satellite_ground_track"  # type: ignore[assignment]
+
     id: Optional[int] = Field(default=None, primary_key=True)
     satellite_id: int = Field(foreign_key="satellite.id", index=True, unique=True)
     latitude_deg: float = Field(sa_column=Column(DOUBLE_PRECISION, nullable=False))

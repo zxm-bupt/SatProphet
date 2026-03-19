@@ -11,6 +11,8 @@ from app.models.base import utcnow
 class TLERecord(SQLModel, table=True):
     """TLE history record."""
 
+    __tablename__ = "tle_record"  # type: ignore[assignment]
+
     id: Optional[int] = Field(default=None, primary_key=True)
     satellite_id: int = Field(foreign_key="satellite.id", index=True)
     epoch: datetime = Field(index=True, nullable=False)
