@@ -1,0 +1,57 @@
+[project]
+name = "satprophet"
+version = "0.1.0"
+description = "Satellite tracking and prediction platform"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+  "fastapi>=0.116.0",
+  "uvicorn[standard]>=0.35.0",
+  "pydantic-settings>=2.10.0",
+  "sqlmodel>=0.0.24",
+  "sqlalchemy>=2.0.43",
+  "psycopg[binary]>=3.2.10",
+  "alembic>=1.16.5",
+  "python-dotenv>=1.1.1",
+  "httpx>=0.28.1",
+  "spacetrack>=1.4.0",
+  "apscheduler>=3.11.0",
+  "astroz>=0.1.4",
+  "skyfield>=1.53"
+]
+
+[dependency-groups]
+dev = [
+  "pytest>=8.4.2",
+  "pytest-asyncio>=1.1.0",
+  "ruff>=0.13.0",
+  "mypy>=1.18.1"
+]
+
+[tool.pytest.ini_options]
+pythonpath = ["."]
+asyncio_mode = "auto"
+markers = [
+  "db_integration: tests requiring real PostGIS service"
+]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.mypy]
+python_version = "3.12"
+warn_return_any = true
+warn_unused_configs = true
+strict = true
+
+[[tool.mypy.overrides]]
+module = [
+  "skyfield",
+  "skyfield.*",
+  "spacetrack",
+  "spacetrack.*",
+  "apscheduler",
+  "apscheduler.*"
+]
+ignore_missing_imports = true
