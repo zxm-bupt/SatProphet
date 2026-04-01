@@ -1,67 +1,100 @@
-## Plan: SatProphet MVP 分阶段开发
+## Plan: SatProphet MVP 后续开发（下一阶段）
 
-目标是在“后端+最小前端”范围内，先打通从 Space-Track 拉取 TLE 到高精度预测与 Cesium 展示的闭环。采用 uv、Alembic、astroz+Skyfield、本地 .env 凭据管理，并以可独立验收的里程碑推进。
+目标：在已完成 MVP 闭环（ingest -> predict -> visualize）基础上，进入“可持续开发”阶段，优先补齐稳定性、可观测性、精度验证与可交付能力。
 
-**Steps**
+---
 
-Phase 0: 项目初始化与基线约束（阻塞后续全部阶段）
-1. 创建 Python 工程骨架与依赖管理，确定 uv 工作流、代码格式与测试工具链，补充最小 README（开发启动、测试、环境变量说明）。
-2. 建立后端目录骨架与配置系统：配置加载、数据库连接、基础 FastAPI 应用入口、健康检查接口。
-3. 建立前端 Vite + React + Cesium 最小骨架（仅壳层页面与地图初始化，不做复杂 UI）。
+## 1. 当前项目组成与现状
 
-Phase 1: 持久化与数据模型（依赖 Phase 0）
-4. 初始化 PostgreSQL 16 + PostGIS 容器编排与本地联调网络配置。
-5. 设计核心数据模型（卫星、TLE 历史、跟踪状态），创建 Alembic 初始迁移，确保空间字段与必要索引到位。
-7. 建立 CRUD 最小集合（tracked 列表读取、跟踪状态更新、按卫星读取最新 TLE）。
-   
-Phase 2: Ingester 与数据同步（依赖 Phase 1）
-8.  实现 Space-Track 客户端（认证、重试、限流、错误分类），读取 .env 凭据。
-9.  实现增量同步逻辑：仅同步 is_tracked=TRUE，按 Epoch 去重并写入历史。
-10. 接入 APScheduler：提供手动触发与定时任务两种入口，支持首次补丁更新。
+### 1.1 后端（FastAPI）
+1. 接口层：`app/api/api_v1/endpoints/` 已提供 health、tracked、track、predict、ingest/sync。
+2. 数据层：`app/models/` + `app/crud/` + Alembic 已具备卫星/TLE/地影点基础模型与迁移。
+3. 同步层：`app/ingester/` 已接入 Space-Track、支持限流、去重、手动与定时同步。
+4. 计算层：`app/engine/` 已通过 Skyfield 路径输出 WGS84 经纬高，astroz 保留集成入口。
 
-Phase 3: 轨道计算引擎（依赖 Phase 1，可与 Phase 2 并行后半段）
-11. 封装 astroz 推演接口与批量传播调用。
-12. 实现 Skyfield 坐标转换（TEME -> WGS84），并定义统一输出（经纬高+时间戳）。
-13. 建立高精度验证基线：选取样本卫星与时间点，记录误差计算方法与阈值。
+### 1.2 前端（React + Cesium）
+1. `web/src/App.tsx` 已具备卫星选择、时间选择、预测触发与结果展示。
+2. `web/src/viewer/CesiumViewer.tsx` 已支持点位渲染与相机飞行。
+3. 已具备 TLE 老化提示（>3天）。
 
-Phase 4: API 业务闭环（依赖 Phase 2 + Phase 3）
-14. 实现 GET /satellites/tracked。
-15. 实现 POST /satellites/{id}/track，更新 is_tracked 后触发一次 TLE 更新补丁。
-18. 实现 GET /predict/{id}?t=timestamp，返回指定时刻经纬高。
-19. 完成 Pydantic v2 输入输出模型、统一错误码与异常处理。
+### 1.3 工程化与测试
+1. 已有 pytest、ruff、mypy 基线命令。
+2. 已有 API/ingester/DB 集成测试，但覆盖仍偏核心 happy path。
+3. 当前凭据管理仍是本地 `.env`，生产化安全能力未落地。
 
-Phase 5: 最小前端联调（依赖 Phase 4）
-20. 实现前端 API 封装与基础状态管理，拉取 tracked 卫星并展示。
-21. 在 Cesium 上渲染动态点位/轨迹，展示 TLE 时效性提示（超过 3 天告警）。
-23. 完成最小交互：选择卫星、查看当前位置与预测时间点结果。
+结论：MVP 功能闭环已完成，下一阶段应从“能跑”升级为“稳定、可观测、可验证、可发布”。
 
-Phase 6: 测试、验收与交付（依赖全部前序）
-24. 后端单元测试：模型/CRUD/服务层；接口测试覆盖 3 个核心端点。
-26. 引擎精度测试：固定样本回归，防止算法或转换回归。
-27. 前端联调测试：接口异常、空数据、TLE 过期提示。
-28. 交付文档：运行手册、环境变量模板、已知限制与下一阶段路线。
+---
 
-**Relevant files**
-- /home/euler/workspace/SatProphet/.github/copilot-instructions.md — 作为当前唯一已存在的架构与规范基线。
-- 规划新增目录：/home/euler/workspace/SatProphet/app, /home/euler/workspace/SatProphet/web, /home/euler/workspace/SatProphet/migrations, /home/euler/workspace/SatProphet/tests。
-- 规划新增关键文件：/home/euler/workspace/SatProphet/pyproject.toml, /home/euler/workspace/SatProphet/docker-compose.yml, /home/euler/workspace/SatProphet/.env.example。
+## 2. 下一阶段开发范围（Phase 7）
 
-**Verification**
-1. 环境验证：容器成功启动 PostgreSQL+PostGIS，后端可连通数据库并通过健康检查。
-2. 数据验证：手动触发一次 TLE 同步后，数据库可见新增 TLE 历史且 Epoch 去重生效。
-3. 计算验证：给定卫星与时间点返回稳定经纬高结果，误差不超过已确认阈值。
-4. API 验证：3 个核心接口在正常与异常输入下均返回预期结构。
-5. 前端验证：Cesium 正常渲染，tracked 列表可交互，TLE 超期提示可触发。
-6. 回归验证：测试套件通过，关键路径（track -> ingest patch -> predict）端到端通过。
+### 2.1 目标
+1. 提升系统在真实网络与数据波动下的鲁棒性。
+2. 建立可观测与告警能力，支持问题定位。
+3. 补齐预测精度验证与回归体系。
+4. 形成 Beta 可交付基线（不是最终生产版）。
 
-**Decisions**
-- 已确认包含范围：后端 + 最小前端。
-- 已确认工具链：uv + FastAPI + Pydantic v2 + Alembic + PostgreSQL16/PostGIS。
-- 已确认精度路线：astroz + Skyfield（高精度优先）。
-- 已确认安全边界：MVP 暂不启用 API 鉴权，仅本地/内网验证。
-- 已确认凭据方式：本地 .env。
+### 2.2 里程碑与任务
 
-**Further Considerations**
-1. 精度阈值数值尚未给出（仅确认“高精度优先”），实施前需定义可验收的误差门限与样本集。
-2. Space-Track 真实账号接入需要你提供变量名与注入方式约定（例如 SPACETRACK_ID / SPACETRACK_PASSWORD）。
-3. 里程碑建议每阶段结束都做一次演示与冻结，避免并行开发导致接口频繁变更。
+Milestone A：稳定性与容错（优先级 P0）
+1. 为 Space-Track 拉取增加可配置重试策略（指数退避 + 最大重试次数）。
+2. 细化 ingest 错误分类：认证失败、限流耗尽、网络超时、上游返回异常。
+3. 为 `POST /ingest/sync` 与 `POST /satellites/{id}/track` 增加可追踪任务结果字段（成功数、失败数、失败原因聚合）。
+4. 增加调度任务重入保护与执行耗时记录。
+
+Milestone B：可观测性（优先级 P0）
+1. 引入结构化日志（JSON 或 key-value），统一请求 ID / 任务 ID。
+2. 增加健康扩展接口（建议 `GET /api/v1/health/detail`）：
+	- DB 可连通性。
+	- 最近一次 ingest 时间与结果。
+	- Space-Track 凭据是否配置（不暴露敏感值）。
+3. 增加最小指标：ingest 成功率、预测请求耗时、TLE 新鲜度分布。
+
+Milestone C：预测能力增强（优先级 P1）
+1. 新增轨迹预测接口（建议）：
+	- `GET /api/v1/predict/{id}/trajectory?start=&end=&step_seconds=`。
+2. 增加 TLE 状态接口（建议）：
+	- `GET /api/v1/satellites/{id}/tle-status`（返回最新 epoch、age_hours、stale 标记）。
+3. 保持现有单点预测接口兼容，不破坏前端已接入路径。
+
+Milestone D：测试与质量门禁（优先级 P0）
+1. 为 ingest 增加失败场景测试：凭据错误、超时、限流、上游空数据。
+2. 为 predict 增加边界测试：无效时间格式、极端时间跨度、satellite 不存在。
+3. 新增端到端主链路测试：track -> patch sync -> predict。
+4. 增加前端最小集成测试（API 错误展示、空列表、老化提示）。
+
+Milestone E：安全与交付（优先级 P1）
+1. 将 `.env.example` 明确为占位值，不允许真实凭据进入仓库。
+2. 增加凭据泄露防护（pre-commit 或 CI 扫描）。
+3. 输出 Beta 发布说明：已知限制、回滚步骤、故障处置手册。
+
+---
+
+## 3. 交付物清单
+1. 新增/更新 API 文档（含新接口示例请求与响应）。
+2. 可观测性文档：日志字段说明、健康检查说明、指标定义。
+3. 测试报告：覆盖率与关键失败场景结果。
+4. Beta 运行手册：部署、排障、回滚。
+
+---
+
+## 4. 验收标准（DoD）
+1. 在无人工干预下，定时 ingest 连续运行 24 小时无崩溃。
+2. 上游异常（超时/认证失败）不会导致服务不可用，错误可追踪。
+3. 新增接口通过测试，且旧接口保持兼容。
+4. `uv run pytest -q`、`uv run ruff check .`、`uv run mypy app` 全通过。
+5. 前端可展示预测失败原因与 TLE 时效状态。
+
+---
+
+## 5. 建议开发顺序（2-3 周）
+1. 第 1 周：Milestone A + B（稳定性、可观测性先落地）。
+2. 第 2 周：Milestone C + D（接口增强与测试补齐并行）。
+3. 第 3 周：Milestone E（安全与交付），完成 Beta 冻结与验收。
+
+---
+
+## 6. 风险与前置条件
+1. 需要稳定的 Space-Track 测试账号与网络访问。
+2. 需要明确精度验收样本集（卫星 ID、时间点、参考来源）。
+3. 若计划近期公网部署，应提前决定鉴权方案（API Key/JWT）。
