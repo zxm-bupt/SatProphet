@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 from collections import deque
 from datetime import datetime, timedelta, timezone
 from threading import Lock
@@ -75,13 +76,14 @@ class SpaceTrackGateway:
         client = self._get_client()
         self._limiter.hit()
 
-        raw = client.tle_latest(
+        raw = client.gp(
             norad_cat_id=norad_ids,
-            ordinal=1,
             orderby="EPOCH desc",
             format="json",
         )
 
+        if isinstance(raw, str):
+            raw = json.loads(raw)
         if isinstance(raw, list):
             return [record for record in raw if isinstance(record, dict)]
         return []
