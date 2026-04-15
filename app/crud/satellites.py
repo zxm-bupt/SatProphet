@@ -23,6 +23,26 @@ def list_tracked_satellites(session: Session) -> list[Satellite]:
     return list(session.exec(statement))
 
 
+def list_satellites(session: Session) -> list[Satellite]:
+    """Return all satellites."""
+    statement = select(Satellite).order_by(col(Satellite.norad_id))
+    return list(session.exec(statement))
+
+
+def create_satellite(
+    session: Session,
+    norad_id: int,
+    name: str,
+    is_tracked: bool = False,
+) -> Satellite:
+    """Create a satellite row."""
+    satellite = Satellite(norad_id=norad_id, name=name, is_tracked=is_tracked)
+    session.add(satellite)
+    session.commit()
+    session.refresh(satellite)
+    return satellite
+
+
 def set_tracking(session: Session, satellite_id: int, enable: bool) -> Satellite | None:
     """Update tracking status for one satellite."""
     satellite = session.get(Satellite, satellite_id)

@@ -67,6 +67,44 @@ def test_list_tracked_satellites(client: TestClient, db_session: Session) -> Non
     assert payload[0]["norad_id"] == 25544
 
 
+def test_list_all_satellites(client: TestClient, db_session: Session) -> None:
+    db_session.add(Satellite(norad_id=64050, name="BUPT-3", is_tracked=False))
+    db_session.add(Satellite(norad_id=64049, name="BUPT-2", is_tracked=True))
+    db_session.commit()
+
+    response = client.get("/api/v1/satellites")
+    assert response.status_code == 200
+    payload = response.json()
+    assert len(payload) == 2
+    assert payload[0]["norad_id"] == 64049
+    assert payload[1]["norad_id"] == 64050
+
+
+def test_create_satellite_success(client: TestClient) -> None:
+    response = client.post(
+        "/api/v1/satellites",
+        json={"norad_id": 64051, "name": "BUPT-4", "is_tracked": True},
+    )
+    assert response.status_code == 201
+    payload = response.json()
+    assert payload["norad_id"] == 64051
+    assert payload["name"] == "BUPT-4"
+    assert payload["is_tracked"] is True
+    assert payload["id"] > 0
+
+
+def test_create_satellite_conflict(client: TestClient, db_session: Session) -> None:
+    db_session.add(Satellite(norad_id=64049, name="BUPT-2", is_tracked=False))
+    db_session.commit()
+
+    response = client.post(
+        "/api/v1/satellites",
+        json={"norad_id": 64049, "name": "BUPT-2-new"},
+    )
+    assert response.status_code == 409
+    assert response.json()["detail"] == "Satellite with NORAD 64049 already exists"
+
+
 def test_predict_endpoint_with_missing_tle_returns_404(client: TestClient, db_session: Session) -> None:
     sat = Satellite(norad_id=25544, name="ISS", is_tracked=True)
     db_session.add(sat)

@@ -15,6 +15,14 @@ class SatelliteRead(BaseModel):
     updated_at: datetime
 
 
+class SatelliteCreateRequest(BaseModel):
+    """Satellite create request."""
+
+    norad_id: int = Field(description="NORAD catalog ID")
+    name: str = Field(min_length=1, max_length=255, description="Satellite name")
+    is_tracked: bool = Field(default=False, description="Whether tracking is enabled")
+
+
 class SatelliteTrackRequest(BaseModel):
     """Track toggle request."""
 

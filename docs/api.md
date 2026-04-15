@@ -27,6 +27,81 @@ Base URL: `http://<host>:8000/api/v1`
 
 ## 2. 卫星管理
 
+### GET /satellites
+
+获取数据库中的全部卫星（包含 tracked 与非 tracked）。
+
+**请求参数**: 无
+
+**响应示例** (200):
+```json
+[
+  {
+    "id": 1,
+    "norad_id": 25544,
+    "name": "ISS (ZARYA)",
+    "is_tracked": true,
+    "updated_at": "2026-04-13T10:05:29.859460Z"
+  },
+  {
+    "id": 2,
+    "norad_id": 64050,
+    "name": "BUPT-3",
+    "is_tracked": false,
+    "updated_at": "2026-04-15T04:00:00.000000Z"
+  }
+]
+```
+
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| id | int | 数据库主键 |
+| norad_id | int | NORAD 编号 |
+| name | string | 卫星名称 |
+| is_tracked | bool | 是否正在追踪 |
+| updated_at | string (ISO8601) | 最后更新时间 |
+
+---
+
+### POST /satellites
+
+新增一颗卫星记录。
+
+**请求体**:
+```json
+{
+  "norad_id": 64049,
+  "name": "BUPT-2",
+  "is_tracked": true
+}
+```
+
+| 字段 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| norad_id | int | 是 | NORAD 编号（唯一） |
+| name | string | 是 | 卫星名称 |
+| is_tracked | bool | 否 | 是否开启追踪，默认 `false` |
+
+**响应示例** (201):
+```json
+{
+  "id": 10,
+  "norad_id": 64049,
+  "name": "BUPT-2",
+  "is_tracked": true,
+  "updated_at": "2026-04-15T04:00:00.000000Z"
+}
+```
+
+**错误响应** (409):
+```json
+{
+  "detail": "Satellite with NORAD 64049 already exists"
+}
+```
+
+---
+
 ### GET /satellites/tracked
 
 获取当前所有已追踪的卫星列表。
@@ -202,7 +277,9 @@ GET /api/v1/predict/10?t=2026-04-13T12:00:00Z
 
 | HTTP 状态码 | 说明 |
 |-------------|------|
+| 201 | 创建成功 |
 | 200 | 请求成功 |
+| 409 | 资源冲突（如 NORAD 已存在） |
 | 404 | 资源未找到（卫星不存在或无 TLE 数据） |
 | 422 | 请求参数校验失败 |
 | 500 | 服务器内部错误 |
